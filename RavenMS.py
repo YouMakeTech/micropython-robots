@@ -33,6 +33,13 @@ class RavenMS:
         self.lb_servos.append(self.low_body)        # 8
         self.lb_servos.append(self.upper_body)      # 9
         
+        # Detach the lower body servos before attaching the upper body
+        # to avoid conflict between shared PWM channels
+        sleep(0.500)
+        for ithServo in self.lb_servos:
+            ithServo.detach()
+        sleep(0.500)
+        
         # ub heli pose (stand 17)
         self.right_lower_arm=Servo(11,initial_position=90+10)
         self.right_arm=Servo(12,initial_position=90-89)
@@ -58,6 +65,18 @@ class RavenMS:
         self.ub_servos.append(self.left_lower_arm)  # 8
         self.ub_servos.append(self.main_rotor)      # 9
         self.ub_servos.append(self.tail_rotor)      # 10
+        
+        # Detach the upper body servos
+        sleep(0.500)
+        for ithServo in self.ub_servos:
+            ithServo.detach()
+        sleep(0.500)
+        
+        # Re-attach the lower body servos
+        sleep(0.500)
+        for ithServo in self.lb_servos:
+            ithServo.attach()
+        sleep(0.500)
         
     def delay(self,ms):
         print('RavenMS.delay(' + str(ms) + ')')
@@ -430,8 +449,8 @@ if __name__ == "__main__":
    ravenms=RavenMS()
 #   ravenms.walk()
    
-#    ravenms.lb_transform_human_heli()
-#    
-#    ravenms.delay(5000)
-#    
-#    ravenms.lb_transform_heli_human()
+   ravenms.lb_transform_human_heli()
+   
+   ravenms.delay(5000)
+   
+   ravenms.lb_transform_heli_human()

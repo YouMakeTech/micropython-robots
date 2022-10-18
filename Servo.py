@@ -14,7 +14,8 @@ class Servo:
         self.position_min=position_min # min. commandable position in degrees
         self.position_max=position_max # max. commandable position in degrees
         self.id=id # GPIO pin to which the servo is connected
-        self.enabled=True;
+        self.enabled=False # True when the servo is connected to a PWM pin
+        self.attach()
         self.write(initial_position) 
     
     # microseconds=angle_to_microseconds(angle)
@@ -51,24 +52,12 @@ class Servo:
     # make the servo move by writing a pulse width on the pin
     def write_microseconds(self,microseconds):
         if self.enabled:
-            pin=PWM(Pin(self.id))
-            pin.freq(50) # Hz
             if microseconds<self.servo_min:
                 microseconds=self.servo_min
             elif microseconds>self.servo_max:
                 microseconds=self.servo_max
-            pin.duty_ns(1000*microseconds)
+            self.pin.duty_ns(1000*microseconds)
             self.microseconds=microseconds
-            # free the PWM channel such that it can be re-used by another pin
-            # The Pico exposes 26 GPIO pins but has only 16 PWM channels
-            # For example, GP0 and GP16 share the same PWM channel PWM_A[0]
-            # and only one GPIO can use the same PWM channel at a time
-            # deinit() is required because we want to control more than 16
-            # servos. The servo remains in the last commanded position when
-            # it does not receive any signal!
-            sleep(0.050)
-            pin.deinit()
-            Pin(self.id).init(mode=Pin.IN)
             
     # write(angle)
     # move the servo to the specified angle
@@ -160,17 +149,39 @@ class Servo:
     # attached()
     # returns True if a pin is attached to the servo
     def attached(self):
-        return self.id>=0
+        return self.enabled
     
-    # enable()
-    # enables a servo for control
-    def enable(self):
+    # attach()
+    # enables a servo for PWM control 
+    def attach(self):
+        self.pin=PWM(Pin(self.id))
+        self.pin.freq(50) # Hz
         self.enabled=True
         
-    # disable()
-    # disables a servo for control
-    # the servo ignores all motion commands until re-enabled
-    def disable(self):
+    # detach()
+    # disables a servo for PWM control
+    # the servo ignores all motion commands until re-attached
+    # free the PWM channel such that it can be re-used by another pin
+    # The Pico exposes 26 GPIO pins but has only 16 PWM channels
+    # For example, GP0 and GP16 share the same PWM channel PWM_A[0]
+    # and only one GPIO can use the same PWM channel at a time
+    # detach() is required when we want to control more than 16
+    # servos. The servo remains in the last commanded position when
+    # it does not receive any signal!
+    #
+    # Example usage:
+    # >>> from Servo import Servo
+    # >>> servo0=Servo(0)
+    # >>> servo16=Servo(16)
+    # >>> servo0.write(180) # the 2 servos move because they are connected to the same PWM channel
+    # >>> servo0.detach()   # detach servo0 in order to move servo16 independently
+    # >>> servo16.write(0)  # only servo16 moves, but not servo 0
+    # >>> servo16.detach()
+    # >>> servo0.attach()
+    # >>> servo0.write(90)  # now we only move servo0, servo16 holds its last commanded position
+    def detach(self):
+        self.pin.deinit()
+        Pin(self.id).init(mode=Pin.IN)
         self.enabled=False    
     
 if __name__ == "__main__":
@@ -246,4 +257,12 @@ if __name__ == "__main__":
     # Return to 90 degrees
     servo.restore_defaults()
     servo.write(90)
+    
+    # Detach the servo
+    servo.detach()
+    assert(servo.attached()==False)
+    servo.write(0) # should not move
+    sleep(0.5)
+    servo.attach()
+    assert(servo.attached())
     
