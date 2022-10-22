@@ -3,59 +3,60 @@
 
 from machine import Pin, PWM
 from time import sleep
+from TriangularMotionProfile import TriangularMotionProfile
 
 class Servo:
-    def __init__(self,id,servo_min=640,servo_max=2400,servo_center=1500, \
-                 initial_position=90.0,position_min=0,position_max=180):
+    def __init__(self,id,servoMin=640,servoMax=2400,servoCenter=1500, \
+                 initialPosition=90.0,positionMin=0,positionMax=180):
         self.microseconds=-1    # servo initial position in µs (initialized by write)
-        self.servo_min=servo_min # Pulse width in µs corresponding to 0 degrees
-        self.servo_max=servo_max # Pulse width in µs corresponding to 180 degrees
-        self.servo_center=servo_center # Pulse width in µs corresponding to 90 degrees
-        self.position_min=position_min # min. commandable position in degrees
-        self.position_max=position_max # max. commandable position in degrees
+        self.servoMin=servoMin # Pulse width in µs corresponding to 0 degrees
+        self.servoMax=servoMax # Pulse width in µs corresponding to 180 degrees
+        self.servoCenter=servoCenter # Pulse width in µs corresponding to 90 degrees
+        self.positionMin=positionMin # min. commandable position in degrees
+        self.positionMax=positionMax # max. commandable position in degrees
         self.id=id # GPIO pin to which the servo is connected
         self.enabled=False # True when the servo is connected to a PWM pin
         self.attach()
-        self.write(initial_position) 
+        self.write(initialPosition) 
     
-    # microseconds=angle_to_microseconds(angle)
+    # microseconds=angleToMicroseconds(angle)
     # convert a servo angle to a pulse duration
     # angle is a float between 0 and 180 degrees included
     # microsecconds is the pulse width in us to send to the servo
-    def angle_to_microseconds(self,angle):
+    def angleToMicroseconds(self,angle):
         if angle<0:
             angle=0
         elif angle>180:
             angle=180
         if angle>=90:
-            microseconds=int(self.servo_center+(angle-90)*((self.servo_max-self.servo_center)/90.0))
+            microseconds=int(self.servoCenter+(angle-90)*((self.servoMax-self.servoCenter)/90.0))
         else:
-            microseconds=int(self.servo_min+angle*((self.servo_center-self.servo_min)/90.0))
+            microseconds=int(self.servoMin+angle*((self.servoCenter-self.servoMin)/90.0))
         return microseconds
     
-    # angle=microseconds_to_angle(microseconds)
+    # angle=microsecondsToAngle(microseconds)
     # convert a pulse duration to a servo angle
     # microsecconds is the pulse width in us to send to the servo
     # angle is a float between 0 and 180 degrees included
-    def microseconds_to_angle(self,microseconds):
-        if microseconds<self.servo_min:
-            microseconds=self.servo_min
-        elif microseconds>self.servo_max:
-            microseconds=self.servo_max
-        if microseconds>=self.servo_center:
-            angle=90.0+((microseconds-self.servo_center)*90.0)/(self.servo_max-self.servo_center)
+    def microsecondsToAngle(self,microseconds):
+        if microseconds<self.servoMin:
+            microseconds=self.servoMin
+        elif microseconds>self.servoMax:
+            microseconds=self.servoMax
+        if microseconds>=self.servoCenter:
+            angle=90.0+((microseconds-self.servoCenter)*90.0)/(self.servoMax-self.servoCenter)
         else:
-            angle=((microseconds-self.servo_min)*90.0)/(self.servo_center-self.servo_min)
+            angle=((microseconds-self.servoMin)*90.0)/(self.servoCenter-self.servoMin)
         return angle
     
-    # write_microseconds(microseconds)
+    # writeMicroseconds(microseconds)
     # make the servo move by writing a pulse width on the pin
-    def write_microseconds(self,microseconds):
+    def writeMicroseconds(self,microseconds):
         if self.enabled:
-            if microseconds<self.servo_min:
-                microseconds=self.servo_min
-            elif microseconds>self.servo_max:
-                microseconds=self.servo_max
+            if microseconds<self.servoMin:
+                microseconds=self.servoMin
+            elif microseconds>self.servoMax:
+                microseconds=self.servoMax
             self.pin.duty_ns(1000*microseconds)
             self.microseconds=microseconds
             
@@ -64,87 +65,87 @@ class Servo:
     # angle is a float between 0 and 180 degrees included
     def write(self,angle):
         if self.enabled:
-            if angle<self.position_min:
-                print('Servo.write('+str(angle)+') limited to min. '+str(self.position_min)+' degrees')
-                angle=self.position_min
-            elif angle>self.position_max:
-                print('Servo.write('+str(angle)+') limited to max. '+str(self.position_max)+' degrees')
-                angle=self.position_max
+            if angle<self.positionMin:
+                print('Servo.write('+str(angle)+') limited to min. '+str(self.positionMin)+' degrees')
+                angle=self.positionMin
+            elif angle>self.positionMax:
+                print('Servo.write('+str(angle)+') limited to max. '+str(self.positionMax)+' degrees')
+                angle=self.positionMax
             else:
                 print('Servo.write('+str(angle)+')')
                 
-            microseconds=self.angle_to_microseconds(angle)
-            self.write_microseconds(microseconds)
+            microseconds=self.angleToMicroseconds(angle)
+            self.writeMicroseconds(microseconds)
         
     # angle=read()
     # returns the latest commanded position in degrees
     # angle is a float between 0 and 180 degrees included
     def read(self):
-        return self.microseconds_to_angle(self.microseconds)
+        return self.microsecondsToAngle(self.microseconds)
     
-    # microseconds=read_micro_seconds()
+    # microseconds=readMicroseconds()
     # returns the latest commanded pulse width in µs
     # microseconds is an integer in us, typically between 640µs and 2400µs
-    def read_microseconds(self):
+    def readMicroseconds(self):
         return self.microseconds
     
-    # trim(servo_trim)
+    # trim(servoTrim)
     # adds an offset in µs to the center position (90 degrees)
     # This allows to shift the center position
-    # servo_trim is the offset to add in µs (default value=0)
-    def trim(self,servo_trim):
+    # servoTrim is the offset to add in µs (default value=0)
+    def trim(self,servoTrim):
         # read the current angular position 
         position=self.read()
         # Add the trim to the servo center pulse width
-        self.servo_center=self.servo_center+servo_trim
+        self.servoCenter=self.servoCenter+servoTrim
         # Move the servo immediately to see the effect
         self.write(position)
     
-    # set_servo_min(servo_min)
+    # setServoMin(servoMin)
     # set the pulse width to command for the servo position at 0 degrees
-    # servo_min is the pulse width in us (default=640)
-    def set_servo_min(self,servo_min):
-        self.servo_min=servo_min
+    # servoMin is the pulse width in us (default=640)
+    def setServoMin(self,servoMin):
+        self.servoMin=servoMin
         # Move the servo immediately to see the effect
         self.write(0.0)
     
-    # set_servo_max(servo_max)
+    # setServoMax(servoMax)
     # set the pulse width to command for the servo position at 180 degrees
-    # servo_max is the pulse width in us (default=2400)
-    def set_servo_max(self,servo_max):
-        self.servo_max=servo_max
+    # servoMax is the pulse width in us (default=2400)
+    def setServoMax(self,servoMax):
+        self.servoMax=servoMax
         # Move the servo immediately to see the effect
         self.write(180.0)
     
-    # set_servo_center(servo_center)
+    # setServoCenter(servoCenter)
     # set the pulse width to command for the servo position at 90 degrees
-    # servo_center is the pulse width in us (default=1500)
-    def set_servo_center(self,servo_center):
-        self.servo_center=servo_center
+    # servoCenter is the pulse width in us (default=1500)
+    def setServoCenter(self,servoCenter):
+        self.servoCenter=servoCenter
         # Move the servo immediately to see the effect
         self.write(90.0)
 
-    # microseconds=get_servo_min()
+    # microseconds=getServoMin()
     # returns the commanded pulse width for an angle of 0 degrees
-    def get_servo_min(self):
-        return self.servo_min
+    def getServoMin(self):
+        return self.servoMin
     
-    # microseconds=get_servo_max()
+    # microseconds=getServoMax()
     # returns the commanded pulse width for an angle of 180 degrees
-    def get_servo_max(self):
-        return self.servo_max
+    def getServoMax(self):
+        return self.servoMax
     
-    # microseconds=get_servo_center()
+    # microseconds=getServoCenter()
     # returns the commanded pulse width for an angle of 90 degrees
-    def get_servo_center(self):
-        return self.servo_center
+    def getServoCenter(self):
+        return self.servoCenter
     
-    # restore_defaults()
-    # restores default values for servo_min, servo_max and servo_center
-    def restore_defaults(self):
-        self.servo_min=640
-        self.servo_max=2400
-        self.servo_center=1500
+    # restoreDefaults()
+    # restores default values for servoMin, servoMax and servoCenter
+    def restoreDefaults(self):
+        self.servoMin=640
+        self.servoMax=2400
+        self.servoCenter=1500
     
     # attached()
     # returns True if a pin is attached to the servo
@@ -182,46 +183,53 @@ class Servo:
     def detach(self):
         self.pin.deinit()
         Pin(self.id).init(mode=Pin.IN)
-        self.enabled=False    
+        self.enabled=False
+        
+    def move(self,angle,duration_ms=500):
+        if self.enabled:
+            microseconds=self.angleToMicroseconds(angle)
+            trajectory=TriangularMotionProfile(self.microseconds,microseconds,duration_ms)
+            while trajectory.moveInProgress():
+                self.writeMicroseconds(int(trajectory.getValue()))
     
 if __name__ == "__main__":
     # Attach a servo to GPIO pin 0
     servo=Servo(0)
     
     # Check conversions from angles to microseconds
-    assert(servo.angle_to_microseconds(0)==640)
-    assert(servo.angle_to_microseconds(90)==1500)
-    assert(servo.angle_to_microseconds(180)==2400)
+    assert(servo.angleToMicroseconds(0)==640)
+    assert(servo.angleToMicroseconds(90)==1500)
+    assert(servo.angleToMicroseconds(180)==2400)
     
     # Check conversions from microseconds to angles
-    assert(servo.microseconds_to_angle(640)==0)
-    assert(servo.microseconds_to_angle(1500)==90)
-    assert(servo.microseconds_to_angle(2400)==180)
+    assert(servo.microsecondsToAngle(640)==0)
+    assert(servo.microsecondsToAngle(1500)==90)
+    assert(servo.microsecondsToAngle(2400)==180)
     
     # attached returns true when a servo is attached
     assert(servo.attached())
     
     # check default values
-    assert(servo.get_servo_min()==640)
-    assert(servo.get_servo_center()==1500)
-    assert(servo.get_servo_max()==2400)
+    assert(servo.getServoMin()==640)
+    assert(servo.getServoCenter()==1500)
+    assert(servo.getServoMax()==2400)
     
     # Move the servo to 0 degrees (min. position)
     servo.write(0)
     assert(servo.read()==0)
-    assert(servo.read_microseconds()==640)
+    assert(servo.readMicroseconds()==640)
     sleep(1) # second
     
     # Move the servo to 90 degrees (center position)
     servo.write(90)
     assert(servo.read()==90)
-    assert(servo.read_microseconds()==1500)
+    assert(servo.readMicroseconds()==1500)
     sleep(1) # second
     
     # Move the servo to 180 degrees (max. position)
     servo.write(180)
     assert(servo.read()==180)
-    assert(servo.read_microseconds()==2400)
+    assert(servo.readMicroseconds()==2400)
     sleep(1) # second
     
     # Return to 0 degrees
@@ -229,33 +237,33 @@ if __name__ == "__main__":
 
     # Servo trim
     servo.trim(50)
-    assert(servo.get_servo_center()==1550)
+    assert(servo.getServoCenter()==1550)
     sleep(1) # second
     
     servo.trim(-100)
-    assert(servo.get_servo_center()==1450)
+    assert(servo.getServoCenter()==1450)
     sleep(1) # second
     
     servo.trim(50)
-    assert(servo.get_servo_center()==1500)
+    assert(servo.getServoCenter()==1500)
     sleep(1) # second
     
     # Servo Min./Max.
-    servo.set_servo_max(2300)
+    servo.setServoMax(2300)
     sleep(1) # second
-    servo.set_servo_max(2400)
+    servo.setServoMax(2400)
     sleep(1) # second
-    servo.set_servo_min(700)
+    servo.setServoMin(700)
     sleep(1) # second
-    servo.set_servo_max(640)
+    servo.setServoMax(640)
     sleep(1) # second
-    servo.set_servo_center(1600)
+    servo.setServoCenter(1600)
     sleep(1) # second
-    servo.set_servo_center(1500)
+    servo.setServoCenter(1500)
     sleep(1) # second
     
     # Return to 90 degrees
-    servo.restore_defaults()
+    servo.restoreDefaults()
     servo.write(90)
     
     # Detach the servo
